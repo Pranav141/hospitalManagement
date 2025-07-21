@@ -19,5 +19,6 @@ public class PatientResponse {
     private String gender;
     private LocalDateTime createdAt;
     private BloodGroupEnum bloodGroup;
+    private InsuranceResponse insuranceResponse;
 
 }

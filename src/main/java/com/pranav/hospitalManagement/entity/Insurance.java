@@ -32,6 +32,7 @@ public class Insurance {
     @Column(nullable = false,updatable = false)
     private String createdAt;
 
-
+    @OneToOne(mappedBy = "insurance")
+    private Patient patient;
 
 }

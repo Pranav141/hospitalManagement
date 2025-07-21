@@ -10,6 +10,7 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @ToString
@@ -42,6 +43,9 @@ public class Patient {
     @Enumerated(EnumType.STRING)
     private BloodGroupEnum bloodGroup;
 
-    @OneToOne
+    @OneToOne(cascade = CascadeType.ALL)
     private Insurance insurance;
+
+    @OneToMany(mappedBy = "patient")
+    private List<Appointment> appointments;
 }
