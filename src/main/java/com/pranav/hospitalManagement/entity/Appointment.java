@@ -1,5 +1,7 @@
 package com.pranav.hospitalManagement.entity;
 
+import com.pranav.hospitalManagement.enums.AppointmentStatus;
+import com.pranav.hospitalManagement.enums.BloodGroupEnum;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -18,7 +20,16 @@ public class Appointment {
     private Long id;
 
     @Column(nullable = false)
-    private LocalDateTime appointmentTime;
+    private LocalDateTime appointmentStartTime;
+
+    @Column(nullable = false)
+    private LocalDateTime appointmentEndTime;
+
+    @Column(nullable = false)
+    private Long duration;
+
+    @Enumerated(EnumType.STRING)
+    private AppointmentStatus status;
 
     @Column(length = 500)
     private String reason;

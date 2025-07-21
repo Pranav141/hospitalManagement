@@ -1,9 +1,7 @@
 package com.pranav.hospitalManagement.service;
 
-import com.pranav.hospitalManagement.dto.InsuranceRequest;
-import com.pranav.hospitalManagement.dto.InsuranceResponse;
-import com.pranav.hospitalManagement.dto.PatientRequest;
-import com.pranav.hospitalManagement.dto.PatientResponse;
+import com.pranav.hospitalManagement.dto.*;
+import com.pranav.hospitalManagement.entity.Appointment;
 import com.pranav.hospitalManagement.entity.Insurance;
 import com.pranav.hospitalManagement.entity.Patient;
 import com.pranav.hospitalManagement.exception.AlreadyExistException;
@@ -19,8 +17,11 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -30,14 +31,14 @@ public class PatientService implements IPatientService {
     private final IInsuranceService insuranceService;
     private final ModelMapper modelMapper;
     @Override
-    public Page<PatientResponse> getPatients(int page, int size, String sortBy) {
+    public Page<PatientSummary> getPatients(int page, int size, String sortBy) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy));
         Page<Patient> patientsPage = patientRepository.findAll(pageable);
-        return patientsPage.map(patient -> modelMapper.map(patient, PatientResponse.class));
+        return patientsPage.map(patient -> modelMapper.map(patient, PatientSummary.class));
     }
 
     @Override
-    public PatientResponse linkInsuranceToPatient(Long id, InsuranceRequest insuranceRequest) {
+    public PatientDetailResponse linkInsuranceToPatient(Long id, InsuranceRequest insuranceRequest) {
         if(!patientRepository.existsById(id)){
             throw new ResourceNotFoundException("Patient with id:-"+id+" Not Found");
         }
@@ -48,29 +49,45 @@ public class PatientService implements IPatientService {
         Insurance insurance=insuranceService.createInsurance(insuranceRequest);
         patient.setInsurance(insurance);
         patient = patientRepository.save(patient);
-        PatientResponse response = modelMapper.map(patient, PatientResponse.class);
+        PatientDetailResponse response = modelMapper.map(patient, PatientDetailResponse.class);
         response.setInsuranceResponse(modelMapper.map(insurance, InsuranceResponse.class));
         return response;
     }
 
     @Override
-    public PatientResponse getPatientById(Long id) {
-        Patient p =patientRepository.findById(id).orElseThrow(
-                () -> new ResourceNotFoundException("Patient with id:-"+id+" Not Found")
-                );
-        Insurance insurance= p.getInsurance();
-        if(insurance!=null){
-            InsuranceResponse insuranceResponse=modelMapper.map(insurance,InsuranceResponse.class);
-            PatientResponse response=modelMapper.map(p, PatientResponse.class);
-            response.setInsuranceResponse(insuranceResponse);
-            return response;
+    @Transactional(readOnly = true)
+    public PatientDetailResponse getPatientById(Long id) {
+        Patient patient = patientRepository.findById(id).orElseThrow(
+                () -> new ResourceNotFoundException("Patient with id:-" + id + " Not Found")
+        );
+
+        PatientDetailResponse response = modelMapper.map(patient, PatientDetailResponse.class);
+
+        if (patient.getInsurance() != null) {
+            response.setInsuranceResponse(modelMapper.map(patient.getInsurance(), InsuranceResponse.class));
         }
-        PatientResponse response=modelMapper.map(p, PatientResponse.class);
+
+        if (patient.getAppointments() != null && !patient.getAppointments().isEmpty()) {
+            List<AppointmentSummary> appointmentSummaries = patient.getAppointments().stream()
+                    .map(appointment -> {
+                        AppointmentSummary dto = modelMapper.map(appointment, AppointmentSummary.class);
+                        if (appointment.getDoctor() != null) {
+                            dto.setPatientId(appointment.getPatient().getId());
+                            dto.setDoctorId(appointment.getDoctor().getId());
+                        }
+                        return dto;
+                    })
+                    .collect(Collectors.toList());
+            response.setAppointmentSummaryList(appointmentSummaries);
+        } else {
+            response.setAppointmentSummaryList(Collections.emptyList());
+        }
+
         return response;
     }
 
     @Override
-    public PatientResponse createPatient(PatientRequest p) {
+    public PatientDetailResponse createPatient(PatientRequest p) {
 
         boolean isEmailPresent = patientRepository.existsByEmail(p.getEmail());
         if(isEmailPresent){
@@ -79,8 +96,8 @@ public class PatientService implements IPatientService {
         Patient patient= modelMapper.map(p,Patient.class);
         try {
             patient=patientRepository.save(patient);
-            PatientResponse patientResponse= modelMapper.map(patient,PatientResponse.class);
-            return patientResponse;
+            PatientDetailResponse patientDetailResponse = modelMapper.map(patient, PatientDetailResponse.class);
+            return patientDetailResponse;
         }
         catch (Exception e) {
             throw new RuntimeException(e);
@@ -97,7 +114,7 @@ public class PatientService implements IPatientService {
     }
 
     @Override
-    public PatientResponse updatePatientById(Long id, PatientRequest p) {
+    public PatientDetailResponse updatePatientById(Long id, PatientRequest p) {
         if(!patientRepository.existsById(id)){
             throw new ResourceNotFoundException("Patient with id:-"+id+" Not Found");
         }
@@ -108,7 +125,7 @@ public class PatientService implements IPatientService {
         patient.setEmail(p.getEmail());
         patient.setBloodGroup(p.getBloodGroup());
         patient=patientRepository.save(patient);
-        return modelMapper.map(patient,PatientResponse.class);
+        return modelMapper.map(patient, PatientDetailResponse.class);
     }
 
 

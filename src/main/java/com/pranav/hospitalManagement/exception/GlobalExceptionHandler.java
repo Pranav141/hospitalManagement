@@ -33,6 +33,17 @@ public class GlobalExceptionHandler {
         errorDetails.put("message",ex.getMessage());
         return new ResponseEntity<>(errorDetails,HttpStatus.CONFLICT);
     }
+
+    @ExceptionHandler(TimeLimitExceed.class)
+    public ResponseEntity<Map<String,Object>> handleTimeLimitExceed(TimeLimitExceed ex){
+        Map<String,Object> errorDetails = new HashMap<>();
+        errorDetails.put("timestamp", LocalDateTime.now());
+        errorDetails.put("status", HttpStatus.CONFLICT.value());
+        errorDetails.put("error", "Time Slot invalid");
+        errorDetails.put("message",ex.getMessage());
+        return new ResponseEntity<>(errorDetails,HttpStatus.CONFLICT);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, Object> errorDetails = new HashMap<>();
