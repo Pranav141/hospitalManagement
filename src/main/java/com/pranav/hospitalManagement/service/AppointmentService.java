@@ -15,6 +15,7 @@ import com.pranav.hospitalManagement.service.interfaces.IAppointmentService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -68,4 +69,30 @@ public class AppointmentService implements IAppointmentService {
         response.setPatientSummary(patientSummary);
         return response;
     }
+
+    @Override
+    @Transactional
+    public AppointmentResponse updateAppointmentStatus(Long id, AppointmentStatus newStatus) {
+        Appointment appointment = appointmentRepository.findById(id).orElseThrow(
+                () -> new ResourceNotFoundException("Appointment with id: " + id + " not found")
+        );
+
+
+         if (appointment.getStatus() == AppointmentStatus.COMPLETED) {
+             throw new IllegalStateException("Cannot change status of a completed appointment.");
+         }
+
+        appointment.setStatus(newStatus);
+        Appointment updatedAppointment = appointmentRepository.save(appointment);
+
+        return modelMapper.map(updatedAppointment, AppointmentResponse.class);
+    }
+
+    @Override
+    @Transactional
+    public void cancelAppointment(Long id) {
+        updateAppointmentStatus(id, AppointmentStatus.CANCELLED);
+    }
+
+
 }
